@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  app:
+    container_name: gps-logger-app
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    image: gps-logger-app
+    command: sh -c "composer install && php -S 0.0.0.0:8080 -t /app/public -c php.ini"
+    ports:
+      - 8080:8080
+    volumes:
+      - ./app:/app
+    # env_file:
+    #   - .env
+
+  logger-myadmin:
+    image: arm64v8/phpmyadmin:latest
+    container_name: logger-myadmin
+    ports:
+      - "1080:80"
+    environment:
+      - PMA_HOST=logger-mysql
+      - PMA_PORT=3306
+    depends_on:
+      - logger-mysql
+
+  logger-mysql:
+    image: arm64v8/mysql:8
+    container_name: logger-mysql
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - gps-logger-data:/var/lib/mysql
+      - ./logger.sql:/docker-entrypoint-initdb.d/dump.sql
+    env_file:
+      - ".env"
+    environment:
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+
+volumes:
+  gps-logger-data:
